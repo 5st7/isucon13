@@ -494,15 +494,25 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		return Livestream{}, err
 	}
 
+	var tags []Tag
+	if err := tx.SelectContext(ctx, &tags, "SELECT tags.id as id, tags.name as name FROM livestream_tags INNER JOIN tags ON livestream_tags.tag_id = tags.id WHERE livestream_tags.livestream_id = ?", livestreamModel.ID); err != nil {
+		fmt.Println("!!!: ", err)
+		return Livestream{}, err
+	}
+	fmt.Println("xxx: ", tags)
+
 	var livestreamTagModels []*LivestreamTagModel
 	if err := tx.SelectContext(ctx, &livestreamTagModels, "SELECT * FROM livestream_tags WHERE livestream_id = ?", livestreamModel.ID); err != nil {
+		fmt.Println("!!!: ", err)
 		return Livestream{}, err
 	}
 
-	tags := make([]Tag, len(livestreamTagModels))
+	var tags2 []Tag
+	tags2 = make([]Tag, len(livestreamTagModels))
 	for i := range livestreamTagModels {
 		tagModel := TagModel{}
 		if err := tx.GetContext(ctx, &tagModel, "SELECT * FROM tags WHERE id = ?", livestreamTagModels[i].TagID); err != nil {
+			fmt.Println("!!!: ", err)
 			return Livestream{}, err
 		}
 
@@ -511,12 +521,14 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 			Name: tagModel.Name,
 		}
 	}
+	fmt.Println("zzz: ", tags)
+	fmt.Println("")
 
 	livestream := Livestream{
 		ID:           livestreamModel.ID,
 		Owner:        owner,
 		Title:        livestreamModel.Title,
-		Tags:         tags,
+		Tags:         tags2,
 		Description:  livestreamModel.Description,
 		PlaylistUrl:  livestreamModel.PlaylistUrl,
 		ThumbnailUrl: livestreamModel.ThumbnailUrl,
