@@ -142,6 +142,9 @@ func reserveLivestreamHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert livestream: "+err.Error())
 	}
 
+	LivestreamCache.Remove(fmt.Sprintf("%d", userID))
+	SearchLivestreamCache.Purge()
+
 	livestreamID, err := rs.LastInsertId()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get last inserted livestream id: "+err.Error())
@@ -173,6 +176,14 @@ func reserveLivestreamHandler(c echo.Context) error {
 func searchLivestreamsHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 	keyTagName := c.QueryParam("tag")
+
+	v, ok := SearchLivestreamCache.Get(keyTagName)
+	if ok {
+		livestreams, ok := v.([]Livestream)
+		if ok {
+			return c.JSON(http.StatusOK, livestreams)
+		}
+	}
 
 	tx, err := dbConn.BeginTxx(ctx, nil)
 	if err != nil {
@@ -234,6 +245,8 @@ func searchLivestreamsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
+	SearchLivestreamCache.Add(keyTagName, livestreams)
+
 	return c.JSON(http.StatusOK, livestreams)
 }
 
@@ -254,6 +267,14 @@ func getMyLivestreamsHandler(c echo.Context) error {
 	// existence already checked
 	userID := sess.Values[defaultUserIDKey].(int64)
 
+	v, ok := LivestreamCache.Get(fmt.Sprintf("%d", userID))
+	if ok {
+		livestreams, ok := v.([]*LivestreamModel)
+		if ok {
+			return c.JSON(http.StatusOK, livestreams)
+		}
+	}
+
 	var livestreamModels []*LivestreamModel
 	if err := tx.SelectContext(ctx, &livestreamModels, "SELECT * FROM livestreams WHERE user_id = ?", userID); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
@@ -270,6 +291,8 @@ func getMyLivestreamsHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
+
+	LivestreamCache.Add(fmt.Sprintf("%d", userID), livestreams)
 
 	return c.JSON(http.StatusOK, livestreams)
 }

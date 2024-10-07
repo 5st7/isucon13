@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"log"
 	"net"
 	"net/http"
@@ -21,6 +22,10 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	echolog "github.com/labstack/gommon/log"
 )
+
+var LivestreamCache *lru.Cache[string, any]
+var SearchLivestreamCache *lru.Cache[string, any]
+var LivecommentCache *lru.Cache[string, any]
 
 const (
 	listenPort                     = 8080
@@ -107,7 +112,23 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 }
 
 func initializeHandler(c echo.Context) error {
-	err := os.RemoveAll("/tmp/image")
+	var err error
+	LivestreamCache, err = lru.New[string, any](512)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
+	}
+
+	SearchLivestreamCache, err = lru.New[string, any](512)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
+	}
+
+	LivecommentCache, err = lru.New[string, any](512)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
+	}
+
+	err = os.RemoveAll("/tmp/image")
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}

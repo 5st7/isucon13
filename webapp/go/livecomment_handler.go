@@ -80,6 +80,14 @@ func getLivecommentsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "livestream_id in path must be integer")
 	}
 
+	v, ok := LivecommentCache.Get(fmt.Sprintf("%d", livestreamID))
+	if ok {
+		livecomments, ok := v.([]Livestream)
+		if ok {
+			return c.JSON(http.StatusOK, livecomments)
+		}
+	}
+
 	tx, err := dbConn.BeginTxx(ctx, nil)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
@@ -279,6 +287,8 @@ func getLivecommentsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
+	LivecommentCache.Add(fmt.Sprintf("%d", livestreamID), livecomments)
+
 	return c.JSON(http.StatusOK, livecomments)
 }
 
@@ -333,6 +343,7 @@ func postLivecommentHandler(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "livestream_id in path must be integer")
 	}
+	LivecommentCache.Remove(fmt.Sprintf("%d", livestreamID))
 
 	// error already checked
 	sess, _ := session.Get(defaultSessionIDKey, c)
