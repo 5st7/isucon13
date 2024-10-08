@@ -13,6 +13,7 @@ require (
 	github.com/labstack/gommon v0.4.0
 	github.com/newrelic/go-agent/v3 v3.34.0
 	github.com/newrelic/go-agent/v3/integrations/nrecho-v4 v1.1.1
+	github.com/newrelic/go-agent/v3/integrations/nrmysql v1.2.2
 	golang.org/x/crypto v0.11.0
 )
 
