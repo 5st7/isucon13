@@ -23,7 +23,6 @@ import (
 	echolog "github.com/labstack/gommon/log"
 
 	"github.com/newrelic/go-agent/v3/integrations/nrecho-v4"
-	_ "github.com/newrelic/go-agent/v3/integrations/nrmysql"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
@@ -102,7 +101,7 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 		conf.ParseTime = parseTime
 	}
 
-	db, err := sqlx.Open("nrmysql", conf.FormatDSN())
+	db, err := sqlx.Open("mysql", conf.FormatDSN())
 	if err != nil {
 		return nil, err
 	}
