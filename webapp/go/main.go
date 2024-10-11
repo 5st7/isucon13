@@ -21,9 +21,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	echolog "github.com/labstack/gommon/log"
-
-	"github.com/newrelic/go-agent/v3/integrations/nrecho-v4"
-	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 var LivestreamCache *lru.Cache[string, any]
@@ -153,21 +150,6 @@ func initializeHandler(c echo.Context) error {
 }
 
 func main() {
-	var app *newrelic.Application
-	var err error
-	app, err = newrelic.NewApplication(
-		newrelic.ConfigAppName("isupipe"),
-		newrelic.ConfigLicense(os.Getenv("NEW_RELIC_LICENSE_KEY")),
-		newrelic.ConfigAppLogEnabled(true),
-		newrelic.ConfigDistributedTracerEnabled(true),
-	)
-
-	if err != nil {
-		fmt.Errorf("failed to init newrelic NewApplication reason: %v", err)
-	} else {
-		fmt.Println("newrelic init success")
-	}
-
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(echolog.DEBUG)
@@ -176,9 +158,6 @@ func main() {
 	cookieStore.Options.Domain = "*.t.isucon.pw"
 	e.Use(session.Middleware(cookieStore))
 	// e.Use(middleware.Recover())
-
-	// echoでTraceできるようにミドルウェアを追加
-	e.Use(nrecho.Middleware(app))
 
 	// 初期化
 	e.POST("/api/initialize", initializeHandler)
